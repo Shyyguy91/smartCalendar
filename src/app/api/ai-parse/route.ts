@@ -78,13 +78,9 @@ async function generateParsedLog(ai: GoogleGenAI, contents: string) {
   };
 
   try {
-    return await ai.models.generateContent({ model: "gemini-2.5-flash", contents, config });
+    return await ai.models.generateContent({ model: process.env.GEMINI_MODEL || "gemini-3.6-flash", contents, config });
   } catch (error) {
-    const providerError = error as { status?: number; message?: string };
-    const modelUnavailable = providerError.status === 404 || providerError.message?.includes("no longer available");
-    if (!modelUnavailable) throw error;
-
-    return ai.models.generateContent({ model: "gemini-3.6-flash", contents, config });
+    throw error;
   }
 }
 
@@ -120,6 +116,7 @@ export async function POST(request: Request) {
     return NextResponse.json(parsedPayload);
   } catch (error) {
     console.error("AI daily log parsing failed", error);
-    return NextResponse.json({ error: "Unable to parse the daily log with Gemini." }, { status: 502 });
+    const providerMessage = error instanceof Error ? error.message : "Unknown Gemini error";
+    return NextResponse.json({ error: `Gemini parsing failed: ${providerMessage}` }, { status: 502 });
   }
 }

@@ -49,7 +49,13 @@ export default function AiImportModal({ isOpen, selectedDate, onClose, onDataImp
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rawInput }),
       });
-      const data = (await response.json()) as WeeklyParsedPayload | { error?: string };
+      const responseText = await response.text();
+      let data: WeeklyParsedPayload | { error?: string };
+      try {
+        data = JSON.parse(responseText) as WeeklyParsedPayload | { error?: string };
+      } catch {
+        throw new Error(response.status === 404 ? "The AI parser API is not available on this deployment. Run the app on a Next.js server such as Vercel." : `The AI parser returned an unexpected response (${response.status}).`);
+      }
       if (!response.ok) throw new Error("error" in data && data.error ? data.error : "The parser could not read that entry.");
       setParsedData(data as WeeklyParsedPayload);
     } catch (parseError) {
