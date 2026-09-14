@@ -21,7 +21,7 @@ function emptyRecord(): DailyRecord { return { completedGoals: [], meals: { ...d
 
 export default function DailyDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("Today");
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(() => new Date(0));
   const [weekAnchor, setWeekAnchor] = useState(selectedDate);
   const [importOpen, setImportOpen] = useState(false);
   const [scheduleImportOpen, setScheduleImportOpen] = useState(false);
@@ -34,6 +34,14 @@ export default function DailyDashboard() {
   const record: DailyRecord = { ...emptyRecord(), ...storedRecord, meals: { ...defaultMeals, ...storedRecord?.meals }, dailyNutrition: { ...emptyRecord().dailyNutrition, ...storedRecord?.dailyNutrition }, workout: { ...emptyRecord().workout, ...storedRecord?.workout } };
   const weekDates = getWeekDates(weekAnchor);
   const meals = useMemo<Record<string, MealDay>>(() => Object.fromEntries(weekDates.map((date) => [date.toLocaleDateString("en-US", { weekday: "long" }), records[toIsoDate(date)]?.meals ?? defaultMeals])), [records, weekDates]);
+
+  useEffect(() => {
+    const today = new Date();
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setSelectedDate(today);
+    setWeekAnchor(today);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, []);
 
   useEffect(() => { const onKey = (event: KeyboardEvent) => { if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return; if (event.key === "ArrowLeft") moveDate(-1); if (event.key === "ArrowRight") moveDate(1); }; window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey); });
   function moveDate(days: number) { const next = new Date(selectedDate); next.setDate(next.getDate() + days); setSelectedDate(next); setWeekAnchor(next); }
