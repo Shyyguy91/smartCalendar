@@ -1,0 +1,26 @@
+"use client";
+
+import { Car, Plus, Trash2 } from "lucide-react";
+import { FormEvent, useMemo, useState } from "react";
+import { DashLogEntry } from "@/types/dashboard";
+
+interface DoorDashTrackerProps { logs: DashLogEntry[]; onChange: (logs: DashLogEntry[]) => void; }
+const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+
+export default function DoorDashTracker({ logs, onChange }: DoorDashTrackerProps) {
+  const [form, setForm] = useState({ date: "", shiftHours: "", grossEarnings: "", gasExpense: "", destination: "rent-vault" as DashLogEntry["destination"] });
+  const totals = useMemo(() => logs.reduce((summary, log) => ({ gross: summary.gross + log.grossEarnings, gas: summary.gas + log.gasExpense, hours: summary.hours + log.shiftHours }), { gross: 0, gas: 0, hours: 0 }), [logs]);
+  const net = totals.gross - totals.gas;
+
+  function addLog(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!form.date || Number(form.shiftHours) <= 0) return;
+    onChange([...logs, { id: crypto.randomUUID(), date: form.date, shiftHours: Number(form.shiftHours), grossEarnings: Number(form.grossEarnings) || 0, gasExpense: Number(form.gasExpense) || 0, destination: form.destination }]);
+    setForm({ date: "", shiftHours: "", grossEarnings: "", gasExpense: "", destination: "rent-vault" });
+  }
+
+  return <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"><div className="mb-5 flex items-start gap-3"><span className="rounded-lg bg-sky-50 p-2 text-sky-700"><Car size={20} aria-hidden="true" /></span><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-sky-700">Vehicle income</p><h2 className="mt-1 text-xl font-bold">DoorDash shift tracker</h2></div></div><div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4"><Metric label="Net profit" value={money.format(net)} /><Metric label="Net / hour" value={money.format(totals.hours ? net / totals.hours : 0)} /><Metric label="Gas spent" value={money.format(totals.gas)} /><Metric label="Hours logged" value={`${totals.hours.toFixed(1)}h`} /></div><form onSubmit={addLog} className="grid gap-3 rounded-lg bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-6"><Field label="Date"><input required type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></Field><Field label="Shift hours"><input required type="number" min="0.25" step="0.25" value={form.shiftHours} onChange={(event) => setForm({ ...form, shiftHours: event.target.value })} /></Field><Field label="Gross earnings"><input type="number" min="0" step="0.01" value={form.grossEarnings} onChange={(event) => setForm({ ...form, grossEarnings: event.target.value })} /></Field><Field label="Gas expense"><input type="number" min="0" step="0.01" value={form.gasExpense} onChange={(event) => setForm({ ...form, gasExpense: event.target.value })} /></Field><Field label="Net flows to"><select value={form.destination} onChange={(event) => setForm({ ...form, destination: event.target.value as DashLogEntry["destination"] })}><option value="rent-vault">October Rent Vault</option><option value="tire-fund">Tire Fund</option></select></Field><button type="submit" className="mt-auto inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-900 px-3 text-sm font-bold text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500"><Plus size={16} aria-hidden="true" />Log shift</button></form><div className="mt-5 space-y-2">{logs.length === 0 ? <p className="rounded-lg border border-dashed border-slate-200 p-4 text-sm text-slate-500">No shifts logged yet. Add your next run above.</p> : logs.map((log) => <div key={log.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 text-sm"><span className="font-semibold">{log.date} · {log.shiftHours}h</span><span className="text-slate-500">Gross {money.format(log.grossEarnings)} · Gas {money.format(log.gasExpense)} · <strong className="text-emerald-700">Net {money.format(log.grossEarnings - log.gasExpense)}</strong></span><button type="button" onClick={() => onChange(logs.filter((entry) => entry.id !== log.id))} className="text-slate-400 hover:text-red-600" aria-label={`Delete shift on ${log.date}`}><Trash2 size={16} aria-hidden="true" /></button></div>)}</div></section>;
+}
+
+function Metric({ label, value }: { label: string; value: string }) { return <div className="rounded-lg border border-slate-200 bg-white p-3"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</p><p className="mt-1 text-lg font-bold text-slate-900">{value}</p></div>; }
+function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="block"><span className="mb-1 block text-xs font-bold text-slate-500">{label}</span><span className="flex h-10 [&>input]:w-full [&>input]:rounded-lg [&>input]:border [&>input]:border-slate-200 [&>input]:bg-white [&>input]:px-2 [&>input]:text-sm [&>input]:outline-none [&>select]:w-full [&>select]:rounded-lg [&>select]:border [&>select]:border-slate-200 [&>select]:bg-white [&>select]:px-2 [&>select]:text-sm">{children}</span></label>; }
